@@ -1,288 +1,170 @@
 @extends('components.app-layout')
 
-@section('title', 'Production Monitoring')
-@section('subtitle', 'Track raw materials used and finished products made')
+@section('title', 'Inventory Management')
+@section('subtitle', 'Track and manage your stock levels')
 
 @push('styles')
 <style>
-    .prod-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .inv-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
 
-    .prod-log {
-        border: 1.5px solid var(--gray-200);
-        border-radius: 10px;
-        overflow: hidden;
-        margin-bottom: 12px;
-        transition: border-color 0.15s;
+    .filter-bar {
+        background: #fff; border: 1px solid var(--gray-200); border-radius: 12px;
+        padding: 14px 18px; margin-bottom: 16px;
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
     }
 
-    .prod-log:hover { border-color: var(--red-primary); }
+    .filter-bar input { max-width: 220px; }
 
-    .prod-log-header {
-        padding: 14px 18px;
-        display: flex; align-items: center; justify-content: space-between;
-        background: var(--gray-50);
-        cursor: pointer;
+    .tab-group { display: flex; gap: 4px; background: var(--gray-100); padding: 4px; border-radius: 8px; }
+    .tab-btn {
+        padding: 6px 14px; border-radius: 6px; border: none; background: none;
+        font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--gray-600);
+        cursor: pointer; transition: all 0.15s;
     }
+    .tab-btn.active { background: #fff; color: var(--gray-800); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
-    .prod-log-title { font-size: 14px; font-weight: 700; color: var(--gray-800); }
-    .prod-log-meta { font-size: 12px; color: var(--gray-600); }
+    .stock-bar { width: 100px; height: 8px; background: var(--gray-200); border-radius: 4px; overflow: hidden; }
+    .stock-fill { height: 100%; border-radius: 4px; }
 
-    .prod-log-body {
-        padding: 16px 18px;
-        display: none;
+    .quick-add-form {
+        display: none; padding: 16px 20px; background: var(--gray-50);
         border-top: 1px solid var(--gray-200);
     }
-    .prod-log-body.open { display: block; }
-
-    .raw-finished-grid {
-        display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-    }
-
-    .mat-section-title {
-        font-size: 11px; font-weight: 700; text-transform: uppercase;
-        letter-spacing: 0.8px; color: var(--gray-600); margin-bottom: 8px;
-    }
-
-    .mat-item {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 8px 12px; border-radius: 6px;
-        background: var(--gray-50);
-        margin-bottom: 6px;
-        font-size: 13px;
-    }
-
-    .mat-name { font-weight: 600; color: var(--gray-800); }
-    .mat-qty { font-family: var(--font-mono); color: var(--gray-600); }
-
-    .output-qty { 
-        font-family: var(--font-mono); font-weight: 700;
-        color: var(--success);
-        background: #D1FAE5; padding: 2px 8px; border-radius: 4px;
-        font-size: 12px;
-    }
-
-    /* ─── NEW PRODUCTION MODAL ─── */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 999; }
-    .modal-overlay.show { display: flex; }
-
-    .modal-box {
-        background: #fff; border-radius: 14px;
-        width: 680px; max-height: 90vh; overflow-y: auto;
-        box-shadow: 0 24px 64px rgba(0,0,0,0.15);
-    }
-
-    .modal-header {
-        padding: 18px 22px; border-bottom: 1px solid var(--gray-200);
-        display: flex; align-items: center; justify-content: space-between;
-        position: sticky; top: 0; background: #fff; z-index: 1;
-    }
-
-    .modal-title { font-size: 16px; font-weight: 700; }
-    .modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--gray-600); }
-
-    .modal-body { padding: 22px; }
-
-    .section-header {
-        font-size: 13px; font-weight: 700; color: var(--gray-800);
-        margin-bottom: 12px; padding-bottom: 8px;
-        border-bottom: 1px solid var(--gray-200);
-        display: flex; align-items: center; gap: 8px;
-    }
-
-    .items-list { margin-bottom: 16px; }
-
-    .item-row {
-        display: grid; grid-template-columns: 1fr 100px 60px auto; gap: 8px;
-        align-items: center; margin-bottom: 8px;
-    }
-
-    .add-item-btn {
-        display: flex; align-items: center; gap: 6px;
-        padding: 8px 14px; border-radius: 8px;
-        border: 1.5px dashed var(--gray-300);
-        background: none; color: var(--gray-600);
-        font-family: var(--font); font-size: 13px; font-weight: 600;
-        cursor: pointer; width: 100%;
-        transition: all 0.15s;
-    }
-    .add-item-btn:hover { border-color: var(--red-primary); color: var(--red-primary); }
-
-    .remove-row-btn {
-        width: 28px; height: 28px; border-radius: 6px;
-        background: #FEE2E2; border: none; color: #DC2626;
-        cursor: pointer; font-size: 14px;
-        display: flex; align-items: center; justify-content: center;
-    }
+    .quick-add-form.open { display: block; }
+    .quick-add-row { display: flex; gap: 10px; align-items: flex-end; }
 </style>
 @endpush
 
 @section('topbar-actions')
-<button class="btn btn-primary" onclick="document.getElementById('newProdModal').classList.add('show')">
-    <i class="fas fa-fire-burner"></i> Add Production Log
-</button>
+<a href="{{ route('stock-in.create') }}" class="btn btn-primary">
+    <i class="fas fa-truck-ramp-box"></i> Add Stock
+</a>
 @endsection
 
 @section('content')
 
 <!-- Stats -->
-<div class="prod-stats">
+<div class="inv-stats">
     <div class="stat-card">
-        <div class="icon" style="background:#FEE2E2;"><i class="fas fa-fire" style="color:var(--red-primary)"></i></div>
-        <div class="value">{{ $todayProductions }}</div>
-        <div class="label">Today's Production Uses</div>
+        <div class="icon" style="background:#FEE2E2;"><i class="fas fa-layer-group" style="color:var(--red-primary)"></i></div>
+        <div class="value">{{ $totalItems }}</div>
+        <div class="label">Total Items</div>
+    </div>
+    <div class="stat-card">
+        <div class="icon" style="background:#DBEAFE;"><i class="fas fa-wheat-awn" style="color:#2563EB"></i></div>
+        <div class="value">{{ $rawMaterialCount }}</div>
+        <div class="label">Raw Materials</div>
     </div>
     <div class="stat-card">
         <div class="icon" style="background:#D1FAE5;"><i class="fas fa-drumstick-bite" style="color:var(--success)"></i></div>
-        <div class="value">{{ $todayOutput }}</div>
-        <div class="label">Total Output Today</div>
+        <div class="value">{{ $finishedCount }}</div>
+        <div class="label">Finished Products</div>
     </div>
     <div class="stat-card">
-        <div class="icon" style="background:#DBEAFE;"><i class="fas fa-clipboard-list" style="color:#2563EB"></i></div>
-        <div class="value">{{ $totalLogs }}</div>
-        <div class="label">Total Logs</div>
+        <div class="icon" style="background:#FEF3C7;"><i class="fas fa-triangle-exclamation" style="color:#D97706"></i></div>
+        <div class="value">{{ $lowStockCount }}</div>
+        <div class="label">Low Stock Items</div>
     </div>
 </div>
 
-<!-- Production History -->
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <div style="position:relative;flex:1;max-width:260px;">
+        <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gray-600);font-size:13px;"></i>
+        <input type="text" class="form-control" id="invSearch" placeholder="Search inventory..." style="padding-left:32px;">
+    </div>
+    <div class="tab-group">
+        <button class="tab-btn active" data-filter="all">All Items</button>
+        <button class="tab-btn" data-filter="raw">Raw Materials</button>
+        <button class="tab-btn" data-filter="finished">Finished Products</button>
+    </div>
+    <div style="margin-left:auto;font-size:13px;color:var(--gray-600);">
+        Last updated: {{ now()->format('M d, Y h:i A') }}
+    </div>
+</div>
+
+<!-- Inventory Table -->
 <div class="card">
-    <div class="card-header">
-        <div>
-            <div class="card-title">Production History</div>
-            <div class="card-subtitle">Recent production activity — click to expand</div>
-        </div>
-    </div>
-    <div class="card-body">
-        @forelse($productions as $prod)
-        <div class="prod-log">
-            <div class="prod-log-header" onclick="toggleLog({{ $prod->id }})">
-                <div>
-                    <div class="prod-log-title">
-                        <i class="fas fa-fire-burner" style="color:var(--red-primary);margin-right:6px;"></i>
-                        Production Batch #{{ $prod->id }} — {{ $prod->employee->first_name ?? 'Staff' }} {{ $prod->employee->last_name ?? '' }}
-                    </div>
-                    <div class="prod-log-meta">
-                        {{ \Carbon\Carbon::parse($prod->date)->format('F d, Y · h:i A') }}
-                    </div>
-                </div>
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <span class="badge badge-green">
-                        {{ $prod->outputs->sum('quantity_produced') }} units produced
-                    </span>
-                    <i class="fas fa-chevron-down" style="color:var(--gray-600);font-size:12px;"></i>
-                </div>
-            </div>
-            <div class="prod-log-body" id="prodLog-{{ $prod->id }}">
-                <div class="raw-finished-grid">
-                    <div>
-                        <div class="mat-section-title">
-                            <i class="fas fa-wheat-awn" style="color:#2563EB"></i> Raw Materials Used
+    <div class="table-wrap">
+        <table id="invTable">
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Type</th>
+                    <th>Current Stock</th>
+                    <th>Stock Used</th>
+                    <th>Status</th>
+                    <th>Border Point</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($inventories as $inv)
+                @php
+                    $qty = $inv->quantity_on_hand;
+                    $border = $inv->border_point ?? 10;
+                    $pct = min(100, ($qty / max(1, $border * 3)) * 100);
+                    $status = $qty <= 0 ? 'Out of Stock' : ($qty <= $border ? 'Low' : 'Medium');
+                    $badgeClass = $qty <= 0 ? 'badge-red' : ($qty <= $border ? 'badge-yellow' : 'badge-green');
+                    $fillClass = $qty <= 0 ? 'critical' : ($qty <= $border ? 'low' : 'ok');
+                    $colors = ['critical'=>'#EF4444','low'=>'#F59E0B','ok'=>'#059669'];
+                @endphp
+                <tr class="inv-row" data-type="{{ $inv->product->category }}">
+                    <td>
+                        <div style="font-weight:600;color:var(--gray-800);">{{ $inv->product->product_name }}</div>
+                        <div style="font-size:11px;color:var(--gray-600);">per {{ $inv->product->unit }}</div>
+                    </td>
+                    <td>
+                        <span class="badge {{ $inv->product->category === 'finished' ? 'badge-red' : 'badge-blue' }}">
+                            {{ $inv->product->category === 'finished' ? 'Finished' : 'Raw' }}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="stock-bar">
+                                <div class="stock-fill" style="width:{{ $pct }}%;background:{{ $colors[$fillClass] }};"></div>
+                            </div>
+                            <span style="font-weight:600;font-family:var(--font-mono);font-size:13px;">
+                                {{ $qty }} <span style="font-weight:400;color:var(--gray-600);font-family:var(--font);font-size:11px;">{{ $inv->product->unit }}</span>
+                            </span>
                         </div>
-                        @foreach($prod->rawMaterials as $rm)
-                        <div class="mat-item">
-                            <span class="mat-name">{{ $rm->product->product_name ?? 'Unknown' }}</span>
-                            <span class="mat-qty">{{ $rm->quantity_used }} {{ $rm->product->unit ?? 'pcs' }}</span>
+                    </td>
+                    <td style="color:var(--gray-600);font-size:13px;">{{ $inv->total_used ?? 0 }} {{ $inv->product->unit }}</td>
+                    <td><span class="badge {{ $badgeClass }}">{{ $status }}</span></td>
+                    <td style="font-size:13px;color:var(--gray-600);">{{ $inv->border_point ?? 10 }} {{ $inv->product->unit }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="toggleAddStock({{ $inv->id }})">
+                            <i class="fas fa-plus"></i> Add Stock
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="7" style="padding:0;">
+                        <div class="quick-add-form" id="addForm-{{ $inv->id }}">
+                            <form action="{{ route('inventory.quick-add') }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="product_id" value="{{ $inv->product_id }}">
+                                <div class="quick-add-row">
+                                    <div class="form-group" style="margin:0;flex:0 0 140px;">
+                                        <label class="form-label">Quantity to Add</label>
+                                        <input type="number" name="quantity" class="form-control" min="1" placeholder="0" required>
+                                    </div>
+                                    <div class="form-group" style="margin:0;flex:0 0 140px;">
+                                        <label class="form-label">Cost per Unit</label>
+                                        <input type="number" name="cost_per_unit" class="form-control" step="0.01" placeholder="0.00">
+                                    </div>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-check"></i> Confirm Add
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" onclick="toggleAddStock({{ $inv->id }})">Cancel</button>
+                                </div>
+                            </form>
                         </div>
-                        @endforeach
-                    </div>
-                    <div>
-                        <div class="mat-section-title">
-                            <i class="fas fa-drumstick-bite" style="color:var(--success)"></i> Output Produced
-                        </div>
-                        @foreach($prod->outputs as $out)
-                        <div class="mat-item">
-                            <span class="mat-name">{{ $out->product->product_name ?? 'Unknown' }}</span>
-                            <span class="output-qty">{{ $out->quantity_produced }} {{ $out->product->unit ?? 'pcs' }}</span>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-        </div>
-        @empty
-        <div style="text-align:center;padding:40px;color:var(--gray-600);">
-            <i class="fas fa-fire-burner" style="font-size:36px;opacity:0.2;display:block;margin-bottom:12px;"></i>
-            <p>No production logs yet. Start by adding a new production batch.</p>
-        </div>
-        @endforelse
-    </div>
-</div>
-
-<!-- ─── NEW PRODUCTION MODAL ─── -->
-<div class="modal-overlay" id="newProdModal">
-    <div class="modal-box">
-        <div class="modal-header">
-            <div class="modal-title"><i class="fas fa-fire-burner" style="color:var(--red-primary)"></i> Record Production Batch</div>
-            <button class="modal-close" onclick="document.getElementById('newProdModal').classList.remove('show')">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="modal-body">
-            <form action="{{ route('production.store') }}" method="POST">
-                @csrf
-                <div class="form-group">
-                    <label class="form-label">Employee</label>
-                    <select name="employee_id" class="form-control" required>
-                        <option value="">Select employee...</option>
-                        @foreach($employees as $emp)
-                        <option value="{{ $emp->id }}">{{ $emp->first_name }} {{ $emp->last_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Production Date</label>
-                    <input type="datetime-local" name="date" class="form-control" value="{{ now()->format('Y-m-d\TH:i') }}" required>
-                </div>
-
-                <!-- Raw Materials -->
-                <div class="section-header">
-                    <i class="fas fa-wheat-awn" style="color:#2563EB"></i> Raw Materials Used
-                </div>
-                <div class="items-list" id="rawList">
-                    <div class="item-row">
-                        <select name="raw_product_id[]" class="form-control" required>
-                            <option value="">Select material...</option>
-                            @foreach($rawProducts as $p)
-                            <option value="{{ $p->id }}">{{ $p->product_name }} ({{ $p->unit }})</option>
-                            @endforeach
-                        </select>
-                        <input type="number" name="raw_quantity[]" class="form-control" placeholder="Qty" min="0.01" step="0.01" required>
-                        <span style="font-size:13px;color:var(--gray-600);">units</span>
-                        <button type="button" class="remove-row-btn" onclick="removeRow(this)"><i class="fas fa-times"></i></button>
-                    </div>
-                </div>
-                <button type="button" class="add-item-btn" onclick="addRawRow()">
-                    <i class="fas fa-plus"></i> Add Raw Material
-                </button>
-
-                <!-- Outputs -->
-                <div class="section-header" style="margin-top:20px;">
-                    <i class="fas fa-drumstick-bite" style="color:var(--success)"></i> Finished Products Produced
-                </div>
-                <div class="items-list" id="outputList">
-                    <div class="item-row">
-                        <select name="output_product_id[]" class="form-control" required>
-                            <option value="">Select product...</option>
-                            @foreach($finishedProducts as $p)
-                            <option value="{{ $p->id }}">{{ $p->product_name }} ({{ $p->unit }})</option>
-                            @endforeach
-                        </select>
-                        <input type="number" name="output_quantity[]" class="form-control" placeholder="Qty" min="1" required>
-                        <span style="font-size:13px;color:var(--gray-600);">units</span>
-                        <button type="button" class="remove-row-btn" onclick="removeRow(this)"><i class="fas fa-times"></i></button>
-                    </div>
-                </div>
-                <button type="button" class="add-item-btn" onclick="addOutputRow()">
-                    <i class="fas fa-plus"></i> Add Output Product
-                </button>
-
-                <div style="margin-top:24px;display:flex;gap:10px;">
-                    <button type="submit" class="btn btn-primary btn-lg" style="flex:1;">
-                        <i class="fas fa-fire-burner"></i> Record Production
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('newProdModal').classList.remove('show')">Cancel</button>
-                </div>
-            </form>
-        </div>
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -290,47 +172,35 @@
 
 @push('scripts')
 <script>
-function toggleLog(id) {
-    const body = document.getElementById('prodLog-' + id);
-    body.classList.toggle('open');
+function toggleAddStock(id) {
+    const form = document.getElementById('addForm-' + id);
+    form.classList.toggle('open');
 }
 
-const rawOpts = `@foreach($rawProducts as $p)<option value="{{ $p->id }}">{{ $p->product_name }} ({{ $p->unit }})</option>@endforeach`;
-const outOpts = `@foreach($finishedProducts as $p)<option value="{{ $p->id }}">{{ $p->product_name }} ({{ $p->unit }})</option>@endforeach`;
+// Filter
+document.getElementById('invSearch').addEventListener('input', filterInv);
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        filterInv();
+    });
+});
 
-function addRawRow() {
-    const row = document.createElement('div');
-    row.className = 'item-row';
-    row.innerHTML = `
-        <select name="raw_product_id[]" class="form-control" required>
-            <option value="">Select material...</option>${rawOpts}
-        </select>
-        <input type="number" name="raw_quantity[]" class="form-control" placeholder="Qty" min="0.01" step="0.01" required>
-        <span style="font-size:13px;color:var(--gray-600);">units</span>
-        <button type="button" class="remove-row-btn" onclick="removeRow(this)"><i class="fas fa-times"></i></button>
-    `;
-    document.getElementById('rawList').appendChild(row);
-}
+function filterInv() {
+    const search = document.getElementById('invSearch').value.toLowerCase();
+    const filter = document.querySelector('.tab-btn.active').dataset.filter;
 
-function addOutputRow() {
-    const row = document.createElement('div');
-    row.className = 'item-row';
-    row.innerHTML = `
-        <select name="output_product_id[]" class="form-control" required>
-            <option value="">Select product...</option>${outOpts}
-        </select>
-        <input type="number" name="output_quantity[]" class="form-control" placeholder="Qty" min="1" required>
-        <span style="font-size:13px;color:var(--gray-600);">units</span>
-        <button type="button" class="remove-row-btn" onclick="removeRow(this)"><i class="fas fa-times"></i></button>
-    `;
-    document.getElementById('outputList').appendChild(row);
-}
-
-function removeRow(btn) {
-    const list = btn.closest('.items-list');
-    if (list.querySelectorAll('.item-row').length > 1) {
-        btn.closest('.item-row').remove();
-    }
+    document.querySelectorAll('.inv-row').forEach(row => {
+        const name = row.querySelector('td:first-child').textContent.toLowerCase();
+        const type = row.dataset.type;
+        const matchSearch = name.includes(search);
+        const matchFilter = filter === 'all' || type === filter;
+        // Show/hide both the data row and its following quick-add row
+        row.style.display = matchSearch && matchFilter ? '' : 'none';
+        const next = row.nextElementSibling;
+        if (next) next.style.display = matchSearch && matchFilter ? '' : 'none';
+    });
 }
 </script>
 @endpush

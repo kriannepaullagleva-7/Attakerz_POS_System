@@ -1,226 +1,251 @@
-<x-app-layout>
-    <div class="content">
-        <h2>Create Stock In</h2>
+@extends('components.app-layout')
 
-        @if(session('error'))
-            <div class="alert alert-error">{{ session('error') }}</div>
-        @endif
+@section('title', 'New Stock In')
+@section('subtitle', 'Record incoming inventory from a supplier')
 
-        <style>
-            .stockin-container {
-                display: grid;
-                grid-template-columns: 2fr 1fr;
-                gap: 2rem;
-            }
+@push('styles')
+<style>
+    .si-form-grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
 
-            .product-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 1rem;
-            }
+    .items-table { width: 100%; border-collapse: collapse; }
+    .items-table thead th {
+        background: var(--gray-50); padding: 10px 12px;
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.6px; color: var(--gray-600);
+        border-bottom: 1px solid var(--gray-200); text-align: left;
+    }
+    .items-table tbody td { padding: 8px 6px; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
+    .items-table tbody tr:last-child td { border-bottom: none; }
 
-            .product-item {
-                border: 1px solid #ddd;
-                padding: 1rem;
-                border-radius: 8px;
-                background: #f9f9f9;
-            }
+    .item-subtotal {
+        font-family: var(--font-mono); font-weight: 700;
+        color: var(--red-primary); font-size: 13px; text-align: right; padding-right: 8px;
+    }
 
-            .product-item h4 {
-                margin-bottom: 0.5rem;
-            }
+    .remove-item-btn {
+        width: 28px; height: 28px; border-radius: 6px;
+        background: #FEE2E2; border: none; color: #DC2626;
+        cursor: pointer; font-size: 13px;
+        display: flex; align-items: center; justify-content: center;
+    }
 
-            .product-item .fields {
-                display: flex;
-                flex-direction: column;
-                gap: 0.5rem;
-            }
+    .add-row-btn {
+        display: flex; align-items: center; gap: 8px;
+        width: 100%; padding: 11px 16px;
+        border: 1.5px dashed var(--gray-300);
+        background: none; border-radius: 8px;
+        font-family: var(--font); font-size: 13px; font-weight: 600;
+        color: var(--gray-600); cursor: pointer;
+        transition: all 0.15s; margin-top: 10px;
+    }
+    .add-row-btn:hover { border-color: var(--red-primary); color: var(--red-primary); background: #FEF2F2; }
 
-            .product-item input {
-                padding: 0.25rem;
-                font-size: 0.9rem;
-            }
+    .total-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        background: var(--red-primary); color: #fff;
+        border-radius: 10px; padding: 14px 20px;
+        margin-top: 16px;
+    }
+    .total-bar .label { font-size: 13px; font-weight: 600; opacity: 0.85; }
+    .total-bar .amount { font-size: 22px; font-weight: 800; font-family: var(--font-mono); }
 
-            .product-item button {
-                margin-top: 0.5rem;
-            }
+    @media (max-width: 900px) { .si-form-grid { grid-template-columns: 1fr; } }
+</style>
+@endpush
 
-            .stockin-summary {
-                position: sticky;
-                top: 100px;
-            }
+@section('topbar-actions')
+<a href="{{ route('stock-in.index') }}" class="btn btn-secondary">
+    <i class="fas fa-arrow-left"></i> Back
+</a>
+@endsection
 
-            #stockTable {
-                width: 100%;
-                border-collapse: collapse;
-                margin-top: 1rem;
-                font-size: 0.9rem;
-            }
+@section('content')
 
-            #stockTable th, #stockTable td {
-                padding: 0.5rem;
-                text-align: left;
-                border-bottom: 1px solid #ddd;
-            }
+<form action="{{ route('stock-in.store') }}" method="POST" id="siForm">
+@csrf
+<input type="hidden" name="total_cost" id="totalCostInput">
 
-            #stockTable th {
-                background: #ecf0f1;
-            }
+<div class="si-form-grid">
 
-            .stock-total {
-                font-size: 1.2rem;
-                font-weight: bold;
-                color: #27ae60;
-                margin-top: 1rem;
-                padding-top: 1rem;
-                border-top: 2px solid #27ae60;
-            }
-        </style>
-
-        <div class="stockin-container">
-            {{-- Products Section --}}
-            <div>
-                <h3>Add Stock Items</h3>
-                @if($products->isEmpty())
-                    <div class="empty-state">
-                        <p>No products available. <a href="{{ route('products.create') }}">Create products first</a></p>
-                    </div>
-                @else
-                    <div class="product-grid">
-                        @foreach($products as $product)
-                            <div class="product-item">
-                                <h4>{{ $product->product_name }}</h4>
-                                <p style="font-size: 0.9rem; color: #666;">{{ $product->unit }}</p>
-                                <div class="fields">
-                                    <input type="number" placeholder="Quantity" min="1" value="1" data-product-id="{{ $product->id }}" data-product-name="{{ $product->product_name }}" data-product-unit="{{ $product->unit }}" class="qty-input">
-                                    <input type="number" placeholder="Cost per unit" min="0" step="0.01" value="0" data-product-id="{{ $product->id }}" class="cost-input">
-                                    <button type="button" class="btn btn-success" onclick="addStockItem(this)">Add</button>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
-
-            {{-- Summary Section --}}
-            <div class="card stockin-summary">
-                <div class="card-header">Stock In Summary</div>
-
-                <form action="{{ route('stock-in.store') }}" method="POST">
-                    @csrf
-
-                    <table id="stockTable">
-                        <thead>
-                            <tr>
-                                <th>Product</th>
-                                <th>Qty</th>
-                                <th>Cost</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="stockBody">
-                        </tbody>
-                    </table>
-
-                    <div class="stock-total">
-                        Total Cost: <span id="totalCost">₱0.00</span>
-                    </div>
-
-                    <input type="hidden" id="stockItems" name="items" value="[]">
-
-                    <div class="form-group">
-                        <label for="supplier_id">Supplier</label>
-                        <select id="supplier_id" name="supplier_id" required>
-                            <option value="">-- Select Supplier --</option>
-                            @foreach($suppliers as $sup)
-                                <option value="{{ $sup->id }}">{{ $sup->supplier_name }}</option>
-                            @endforeach
-                        </select>
-                        @error('supplier_id')<span class="error">{{ $message }}</span>@enderror
-                    </div>
-
-                    <div class="form-group">
-                        <label for="employee_id">Employee</label>
-                        <select id="employee_id" name="employee_id" required>
-                            <option value="">-- Select Employee --</option>
-                            @foreach($employees as $emp)
-                                <option value="{{ $emp->id }}">{{ $emp->first_name }} {{ $emp->last_name }}</option>
-                            @endforeach
-                        </select>
-                        @error('employee_id')<span class="error">{{ $message }}</span>@enderror
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success">Record Stock In</button>
-                        <a href="{{ route('stock-in.index') }}" class="btn">Cancel</a>
-                    </div>
-                </form>
-            </div>
+    <!-- ─── LEFT: Transaction Info ─── -->
+    <div class="card" style="position:sticky;top:80px;">
+        <div class="card-header">
+            <div class="card-title"><i class="fas fa-clipboard-list" style="color:var(--red-primary)"></i> Transaction Details</div>
         </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label class="form-label">Supplier <span style="color:var(--red-primary)">*</span></label>
+                <select name="supplier_id" class="form-control" required>
+                    <option value="">Select supplier...</option>
+                    @foreach($suppliers as $sup)
+                    <option value="{{ $sup->id }}" {{ old('supplier_id') == $sup->id ? 'selected' : '' }}>
+                        {{ $sup->supplier_name }}
+                    </option>
+                    @endforeach
+                </select>
+                <div style="margin-top:6px;">
+                    <a href="{{ route('suppliers.index') }}" style="font-size:11px;color:var(--red-primary);text-decoration:none;">
+                        <i class="fas fa-arrow-right"></i> Manage suppliers
+                    </a>
+                </div>
+            </div>
 
-        <script>
-            let stockItems = {};
+            <div class="form-group">
+                <label class="form-label">Received By <span style="color:var(--red-primary)">*</span></label>
+                <select name="employee_id" class="form-control" required>
+                    <option value="">Select employee...</option>
+                    @foreach($employees as $emp)
+                    <option value="{{ $emp->id }}" {{ old('employee_id') == $emp->id ? 'selected' : '' }}>
+                        {{ $emp->first_name }} {{ $emp->last_name }} — {{ $emp->role }}
+                    </option>
+                    @endforeach
+                </select>
+            </div>
 
-            function addStockItem(button) {
-                const fields = button.parentElement;
-                const qtyInput = fields.querySelector('.qty-input');
-                const costInput = fields.querySelector('.cost-input');
-                const productId = qtyInput.getAttribute('data-product-id');
-                const productName = qtyInput.getAttribute('data-product-name');
-                const productUnit = qtyInput.getAttribute('data-product-unit');
+            <div class="form-group">
+                <label class="form-label">Delivery Date <span style="color:var(--red-primary)">*</span></label>
+                <input type="datetime-local" name="date" class="form-control"
+                    value="{{ old('date', now()->format('Y-m-d\TH:i')) }}" required>
+            </div>
 
-                const qty = parseInt(qtyInput.value);
-                const cost = parseFloat(costInput.value);
+            <div class="form-group">
+                <label class="form-label">Notes / Remarks</label>
+                <textarea name="notes" class="form-control" rows="3"
+                    placeholder="Optional delivery notes...">{{ old('notes') }}</textarea>
+            </div>
 
-                if (qty <= 0 || cost < 0) {
-                    alert('Please enter valid quantity and cost');
-                    return;
-                }
+            <div style="margin-top:8px;">
+                <div class="total-bar">
+                    <div class="label"><i class="fas fa-peso-sign"></i> Total Cost</div>
+                    <div class="amount" id="totalDisplay">₱0.00</div>
+                </div>
+            </div>
 
-                stockItems[productId] = {
-                    product_id: parseInt(productId),
-                    product_name: productName,
-                    unit: productUnit,
-                    quantity: qty,
-                    cost: cost
-                };
-
-                updateStockTable();
-            }
-
-            function removeStockItem(productId) {
-                delete stockItems[productId];
-                updateStockTable();
-            }
-
-            function updateStockTable() {
-                let html = '';
-                let total = 0;
-
-                for (let id in stockItems) {
-                    let item = stockItems[id];
-                    let subtotal = item.quantity * item.cost;
-                    total += subtotal;
-
-                    html += `
-                        <tr>
-                            <td>${item.product_name}</td>
-                            <td>${item.quantity}</td>
-                            <td>₱${item.cost.toFixed(2)}</td>
-                            <td><button type="button" class="btn btn-danger btn-small" onclick="removeStockItem(${id})">Remove</button></td>
-                        </tr>
-                    `;
-                }
-
-                document.getElementById('stockBody').innerHTML = html || '<tr><td colspan="4" style="text-align:center;color:#999;">No items added</td></tr>';
-                document.getElementById('totalCost').textContent = '₱' + total.toFixed(2);
-
-                let stockArray = Object.values(stockItems);
-                document.getElementById('stockItems').value = JSON.stringify(stockArray);
-            }
-
-            // Initialize
-            updateStockTable();
-        </script>
+            <button type="submit" class="btn btn-primary btn-lg" style="width:100%;justify-content:center;margin-top:14px;" id="submitBtn" disabled>
+                <i class="fas fa-truck-ramp-box"></i> Record Stock In
+            </button>
+        </div>
     </div>
-</x-app-layout>
+
+    <!-- ─── RIGHT: Items ─── -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title"><i class="fas fa-boxes-stacked" style="color:var(--red-primary)"></i> Items Received</div>
+                <div class="card-subtitle">Add all products received in this delivery</div>
+            </div>
+            <span class="badge badge-blue" id="itemCountBadge">0 items</span>
+        </div>
+        <div class="card-body">
+            <div class="table-wrap">
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th style="width:35%">Product</th>
+                            <th style="width:18%">Qty</th>
+                            <th style="width:22%">Cost / Unit</th>
+                            <th style="width:18%">Subtotal</th>
+                            <th style="width:7%"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsBody">
+                        <!-- rows added by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <button type="button" class="add-row-btn" onclick="addRow()">
+                <i class="fas fa-plus-circle"></i> Add Product Line
+            </button>
+
+            @error('items')
+            <div class="alert alert-error" style="margin-top:12px;">{{ $message }}</div>
+            @enderror
+        </div>
+    </div>
+
+</div>
+</form>
+
+@endsection
+
+@push('scripts')
+<script>
+const products = @json($products);
+
+const productOptions = products.map(p =>
+    `<option value="${p.id}" data-unit="${p.unit}">${p.product_name} (${p.unit})</option>`
+).join('');
+
+let rowCount = 0;
+
+function addRow() {
+    rowCount++;
+    const id = 'row_' + rowCount;
+
+    const tr = document.createElement('tr');
+    tr.id = id;
+    tr.innerHTML = `
+        <td>
+            <select name="product_id[]" class="form-control" onchange="updateRowMeta('${id}')" required>
+                <option value="">Select product...</option>
+                ${productOptions}
+            </select>
+        </td>
+        <td>
+            <input type="number" name="quantity[]" class="form-control" min="1" step="0.01"
+                placeholder="0" oninput="calcRow('${id}')" required style="font-family:var(--font-mono);">
+        </td>
+        <td>
+            <div style="position:relative;">
+                <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gray-600);font-size:12px;">₱</span>
+                <input type="number" name="cost_per_unit[]" class="form-control" min="0" step="0.01"
+                    placeholder="0.00" oninput="calcRow('${id}')" required style="padding-left:22px;font-family:var(--font-mono);">
+            </div>
+        </td>
+        <td class="item-subtotal" id="sub_${id}">₱0.00</td>
+        <td>
+            <button type="button" class="remove-item-btn" onclick="removeRow('${id}')">
+                <i class="fas fa-times"></i>
+            </button>
+        </td>
+    `;
+    document.getElementById('itemsBody').appendChild(tr);
+    updateSummary();
+}
+
+function removeRow(id) {
+    document.getElementById(id)?.remove();
+    updateSummary();
+}
+
+function calcRow(id) {
+    const row = document.getElementById(id);
+    if (!row) return;
+    const qty  = parseFloat(row.querySelector('input[name="quantity[]"]').value) || 0;
+    const cost = parseFloat(row.querySelector('input[name="cost_per_unit[]"]').value) || 0;
+    const sub  = qty * cost;
+    document.getElementById('sub_' + id).textContent = '₱' + sub.toLocaleString('en-PH', {minimumFractionDigits:2});
+    updateSummary();
+}
+
+function updateSummary() {
+    const rows = document.querySelectorAll('#itemsBody tr');
+    let total = 0;
+
+    rows.forEach(row => {
+        const qty  = parseFloat(row.querySelector('input[name="quantity[]"]')?.value) || 0;
+        const cost = parseFloat(row.querySelector('input[name="cost_per_unit[]"]')?.value) || 0;
+        total += qty * cost;
+    });
+
+    document.getElementById('totalDisplay').textContent = '₱' + total.toLocaleString('en-PH', {minimumFractionDigits:2});
+    document.getElementById('totalCostInput').value = total.toFixed(2);
+    document.getElementById('itemCountBadge').textContent = rows.length + ' item' + (rows.length !== 1 ? 's' : '');
+    document.getElementById('submitBtn').disabled = rows.length === 0;
+}
+
+// Start with one row
+addRow();
+</script>
+@endpush

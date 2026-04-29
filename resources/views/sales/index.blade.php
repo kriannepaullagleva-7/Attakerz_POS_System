@@ -184,10 +184,10 @@ function viewReceipt(id) {
     `;
 
     (sale.details || []).forEach(d => {
-        const itemTotal = (d.price * d.quantity).toFixed(2);
+        const itemTotal = (d.unit_price * d.quantity).toFixed(2);
         html += `
         <div class="r-row">
-            <div><div>${d.product ? d.product.product_name : 'Item'}</div><div style="font-size:11px;color:var(--gray-600)">x${d.quantity} @ ₱${parseFloat(d.price).toFixed(2)}</div></div>
+            <div><div>${d.product ? d.product.product_name : 'Item'}</div><div style="font-size:11px;color:var(--gray-600)">x${d.quantity} @ ₱${parseFloat(d.unit_price).toFixed(2)}</div></div>
             <span style="font-family:var(--font-mono);font-weight:600;">₱${parseFloat(itemTotal).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
         </div>`;
     });

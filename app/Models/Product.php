@@ -6,10 +6,25 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    protected $fillable = ['product_name','category','unit','price'];
+    protected $fillable = [
+        'product_name',
+        'category',
+        'unit',
+        'price',
+    ];
 
     public function inventory()
     {
         return $this->hasOne(Inventory::class, 'product_id');
+    }
+
+    public function saleDetails()
+    {
+        return $this->hasMany(SaleDetail::class, 'product_id');
+    }
+
+    public function stockInDetails()
+    {
+        return $this->hasMany(StockInDetail::class, 'product_id');
     }
 }

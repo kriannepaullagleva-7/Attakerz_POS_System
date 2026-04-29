@@ -6,27 +6,18 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
-
-            $table->foreignId('employee_id')
-                ->constrained('employees') // ✔ uses employees.id automatically
-                ->cascadeOnDelete();
-
+            $table->foreignId('employee_id')->nullable()->constrained('employees')->nullOnDelete();
+            $table->dateTime('date');
             $table->decimal('total_amount', 10, 2);
+            $table->decimal('cash_paid', 10, 2)->nullable();
             $table->timestamps();
-            $table->date('date')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('sales');

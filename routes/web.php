@@ -10,35 +10,33 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProductionController;
 
-// ─── Dashboard ────────────────────────────────────────────────
+// Dashboard
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-// ─── POS / Cashier ────────────────────────────────────────────
+// POS / Cashier
 Route::get('/pos', [SaleController::class, 'pos'])->name('pos');
 
-// ─── Sales ────────────────────────────────────────────────────
+// Sales
 Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
 Route::post('/sales', [SaleController::class, 'store'])->name('sales.store');
 Route::get('/sales/{sale}', [SaleController::class, 'show'])->name('sales.show');
 
-// ─── Products ─────────────────────────────────────────────────
-Route::resource('products', ProductController::class);
+// Products & Suppliers — modal-based CRUD, no dedicated create/edit/show pages
+Route::resource('products', ProductController::class)->only(['index', 'store', 'update', 'destroy']);
+Route::resource('suppliers', SupplierController::class)->only(['index', 'store', 'update', 'destroy']);
 
-// ─── Suppliers ────────────────────────────────────────────────
-Route::resource('suppliers', SupplierController::class);
+// Stock In
+Route::resource('stock-in', StockInController::class)->only(['index', 'create', 'store', 'show']);
 
-// ─── Stock In ─────────────────────────────────────────────────
-Route::resource('stock-in', StockInController::class);
-
-// ─── Inventory ────────────────────────────────────────────────
+// Inventory
 Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
 Route::post('/inventory/quick-add', [InventoryController::class, 'quickAdd'])->name('inventory.quick-add');
 
-// ─── Production ───────────────────────────────────────────────
+// Production
 Route::get('/production', [ProductionController::class, 'index'])->name('production.index');
 Route::post('/production', [ProductionController::class, 'store'])->name('production.store');
 Route::get('/production/{production}', [ProductionController::class, 'show'])->name('production.show');
 Route::delete('/production/{production}', [ProductionController::class, 'destroy'])->name('production.destroy');
 
-// ─── Reports ──────────────────────────────────────────────────
+// Reports
 Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');

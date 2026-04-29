@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\DB;
 
 class SaleController extends Controller
 {
-    // POS index — shows all available products with inventory
     public function pos()
     {
         $products = Product::with('inventory')
@@ -29,8 +28,8 @@ class SaleController extends Controller
             ->orderByDesc('date')
             ->paginate(20);
 
-        $totalSales = Sale::whereDate('date', today())->sum('total_amount');
-        $totalOrders = Sale::whereDate('date', today())->count();
+        $totalSales   = Sale::whereDate('date', today())->sum('total_amount');
+        $totalOrders  = Sale::whereDate('date', today())->count();
         $avgOrderValue = $totalOrders > 0 ? $totalSales / $totalOrders : 0;
 
         return view('sales.index', compact('sales', 'totalSales', 'totalOrders', 'avgOrderValue'));
@@ -61,6 +60,13 @@ class SaleController extends Controller
             ]);
 
             foreach ($cartItems as $item) {
+                $inv = Inventory::where('product_id', $item['id'])->lockForUpdate()->first();
+
+                if (!$inv || $inv->quantity_on_hand < $item['qty']) {
+                    $name = Product::find($item['id'])?->product_name ?? "ID {$item['id']}";
+                    throw new \Exception("Insufficient stock for: {$name}");
+                }
+
                 SaleDetail::create([
                     'sale_id'    => $sale->id,
                     'product_id' => $item['id'],
@@ -68,12 +74,8 @@ class SaleController extends Controller
                     'unit_price' => $item['price'],
                 ]);
 
-                // Deduct from inventory
-                $inv = Inventory::where('product_id', $item['id'])->first();
-                if ($inv) {
-                    $inv->decrement('quantity_on_hand', $item['qty']);
-                    $inv->touch();
-                }
+                $inv->quantity_on_hand -= $item['qty'];
+                $inv->save();
             }
         });
 

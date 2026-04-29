@@ -1,4 +1,4 @@
-@extends('components.app-layout')
+@extends('layouts.app')
 
 @section('title', 'Point of Sale')
 @section('subtitle', 'Select items to add to order')
@@ -408,9 +408,6 @@
             </div>
             <div class="category-tabs">
                 <button class="cat-tab active" data-cat="all">All Items</button>
-                <button class="cat-tab" data-cat="Lechon Manok">Lechon Manok</button>
-                <button class="cat-tab" data-cat="Sides">Sides</button>
-                <button class="cat-tab" data-cat="Drinks">Drinks</button>
             </div>
         </div>
 
@@ -419,7 +416,7 @@
             @php
                 $stock = $product->inventory ? $product->inventory->quantity_on_hand : 0;
                 $emojis = ['Whole Lechon Manok'=>'🍗','Half Chicken'=>'🍗','Quarter Chicken'=>'🍗','Plain Rice'=>'🍚','Java Rice'=>'🍚','Gravy'=>'🫙','Soda'=>'🥤','Juice'=>'🧃','Water'=>'💧'];
-                $emoji = $emojis[$product->product_name] ?? ($product->category === 'Finished' ? '🍽️' : '📦');
+                $emoji = $emojis[$product->product_name] ?? ($product->category === 'finished' ? '🍽️' : '📦');
             @endphp
             <div class="product-card {{ $stock <= 0 ? 'out-of-stock' : '' }}"
                  data-id="{{ $product->id }}"
@@ -432,8 +429,8 @@
                  onclick="addToCart(this)">
                 <div class="product-img">
                     {{ $emoji }}
-                    <span class="product-category-badge badge {{ $product->category === 'Finished' ? 'badge-red' : 'badge-blue' }}">
-                        {{ $product->category === 'Finished' ? 'Finished' : 'Raw' }}
+                    <span class="product-category-badge badge {{ $product->category === 'finished' ? 'badge-red' : 'badge-blue' }}">
+                        {{ $product->category === 'finished' ? 'Finished' : 'Raw' }}
                     </span>
                     @if($stock <= 0)
                     <div class="oos-badge">Out of Stock</div>
@@ -692,14 +689,11 @@ function completeSale() {
     document.getElementById('receiptChange').textContent = '₱' + change.toFixed(2);
 
     document.getElementById('receiptModal').classList.add('show');
-
-    // Submit form to backend
-    document.getElementById('saleForm').submit();
+    // Form is submitted when user clicks "New Order" (see newOrder())
 }
 
 function newOrder() {
-    document.getElementById('receiptModal').classList.remove('show');
-    clearCart();
+    document.getElementById('saleForm').submit();
 }
 
 function clearCart() {

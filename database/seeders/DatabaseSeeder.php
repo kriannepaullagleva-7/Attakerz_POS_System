@@ -12,136 +12,63 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // =========================
-        // EMPLOYEES
-        // =========================
         Employee::create([
-            'first_name' => 'Juan',
-            'middle_name' => 'Santos',
-            'last_name' => 'Dela Cruz',
+            'first_name'     => 'Juan',
+            'middle_name'    => 'Santos',
+            'last_name'      => 'Dela Cruz',
             'contact_number' => '09123456789',
-            'address' => '123 Main St, Manila',
-            'role' => 'cashier'
+            'address'        => '123 Main St, Manila',
+            'role'           => 'cashier',
         ]);
 
         Employee::create([
-            'first_name' => 'Maria',
-            'middle_name' => 'Garcia',
-            'last_name' => 'Lopez',
+            'first_name'     => 'Maria',
+            'middle_name'    => 'Garcia',
+            'last_name'      => 'Lopez',
             'contact_number' => '09987654321',
-            'address' => '456 Second Ave, Quezon City',
-            'role' => 'staff'
+            'address'        => '456 Second Ave, Quezon City',
+            'role'           => 'staff',
         ]);
 
-        // =========================
-        // SUPPLIERS
-        // =========================
         Supplier::create([
-            'supplier_name' => 'Local Poultry Farm',
+            'supplier_name'  => 'Local Poultry Farm',
             'contact_number' => '02-1234567',
-            'address' => 'Digos City'
+            'address'        => 'Digos City',
         ]);
 
         Supplier::create([
-            'supplier_name' => 'Metro Food Supplies Inc.',
+            'supplier_name'  => 'Metro Food Supplies Inc.',
             'contact_number' => '02-7654321',
-            'address' => 'Digos City'
+            'address'        => 'Digos City',
         ]);
 
-        // =========================
-        // RAW PRODUCTS ONLY
-        // =========================
+        // Raw materials
+        $rawProducts = [
+            ['product_name' => 'Whole Chicken',  'unit' => 'pc',     'price' => 180.00],
+            ['product_name' => 'Charcoal',        'unit' => 'kg',     'price' =>  30.00],
+            ['product_name' => 'BBQ Marinade',    'unit' => 'bottle', 'price' =>  25.00],
+            ['product_name' => 'Pork Belly',      'unit' => 'kg',     'price' => 250.00],
+        ];
 
-        $whole_chicken = Product::create([
-            'product_name' => 'Whole Chicken',
-            'category' => 'raw',
-            'unit' => 'pc',
-            'price' => 180.00
-        ]);
+        $rawQty = [50, 100, 40, 80];
 
-        $charcoal = Product::create([
-            'product_name' => 'Charcoal',
-            'category' => 'raw',
-            'unit' => 'kg',
-            'price' => 30.00
-        ]);
+        foreach ($rawProducts as $i => $data) {
+            $product = Product::create(array_merge($data, ['category' => 'raw']));
+            Inventory::create(['product_id' => $product->id, 'quantity_on_hand' => $rawQty[$i]]);
+        }
 
-        $rice = Product::create([
-            'product_name' => 'Rice',
-            'category' => 'raw',
-            'unit' => 'kg',
-            'price' => 60.00
-        ]);
+        // Finished products
+        $finishedProducts = [
+            ['product_name' => 'Whole Lechon Manok', 'unit' => 'pc', 'price' => 250.00],
+            ['product_name' => 'Half Lechon Manok',  'unit' => 'pc', 'price' => 140.00],
+            ['product_name' => 'Liempo',              'unit' => 'pc', 'price' => 150.00],
+        ];
 
-        $marinade = Product::create([
-            'product_name' => 'BBQ Marinade',
-            'category' => 'raw',
-            'unit' => 'bottle',
-            'price' => 25.00
-        ]);
+        $finishedQty = [20, 60, 100];
 
-        // =========================
-        // FINISHED PRODUCTS
-        // =========================
-
-        $lechon_manok = Product::create([
-            'product_name' => 'Lechon Manok (Whole)',
-            'category' => 'finished',
-            'unit' => 'pc',
-            'price' => 450.00
-        ]);
-
-        $manok_quarter = Product::create([
-            'product_name' => 'Lechon Manok Quarter',
-            'category' => 'finished',
-            'unit' => 'pc',
-            'price' => 140.00
-        ]);
-
-        $manok_sauce = Product::create([
-            'product_name' => 'Special Sauce',
-            'category' => 'finished',
-            'unit' => 'bottle',
-            'price' => 50.00
-        ]);
-
-        // =========================
-        // INVENTORY
-        // =========================
-
-        Inventory::create([
-            'product_id' => $whole_chicken->id,
-            'quantity_on_hand' => 50
-        ]);
-
-        Inventory::create([
-            'product_id' => $charcoal->id,
-            'quantity_on_hand' => 100
-        ]);
-
-        Inventory::create([
-            'product_id' => $rice->id,
-            'quantity_on_hand' => 200
-        ]);
-
-        Inventory::create([
-            'product_id' => $marinade->id,
-            'quantity_on_hand' => 40
-        ]);
-
-        Inventory::create([
-            'product_id' => $lechon_manok->id,
-            'quantity_on_hand' => 20
-        ]);
-
-        Inventory::create([
-            'product_id' => $manok_quarter->id,
-            'quantity_on_hand' => 60
-        ]);
-
-        Inventory::create([
-            'product_id' => $manok_sauce->id,
-            'quantity_on_hand' => 100
-        ]);
+        foreach ($finishedProducts as $i => $data) {
+            $product = Product::create(array_merge($data, ['category' => 'finished']));
+            Inventory::create(['product_id' => $product->id, 'quantity_on_hand' => $finishedQty[$i]]);
+        }
     }
 }

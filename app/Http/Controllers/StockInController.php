@@ -4,98 +4,91 @@ namespace App\Http\Controllers;
 
 use App\Models\StockIn;
 use App\Models\StockInDetail;
+use App\Models\Product;
+use App\Models\Supplier;
+use App\Models\Employee;
 use App\Models\Inventory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class StockInController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $stocks = StockIn::all();
-        return view('stock-in.index', compact('stocks'));
+        $stockIns = StockIn::with(['supplier', 'employee', 'details.product'])
+            ->orderByDesc('date')
+            ->paginate(20);
+
+        $totalCostThisMonth = StockIn::whereMonth('date', now()->month)->sum('total_cost');
+        $totalTransactions  = StockIn::count();
+        $todayTransactions  = StockIn::whereDate('date', today())->count();
+
+        return view('stock-in.index', compact('stockIns', 'totalCostThisMonth', 'totalTransactions', 'todayTransactions'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        $suppliers = \App\Models\Supplier::all();
-        $employees = \App\Models\Employee::all();
-        $products = \App\Models\Product::all();
+        $suppliers = Supplier::orderBy('supplier_name')->get();
+        $employees = Employee::orderBy('first_name')->get();
+        $products  = Product::orderBy('product_name')->get();
+
         return view('stock-in.create', compact('suppliers', 'employees', 'products'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $request->validate([
-            'supplier_id' => 'required|exists:suppliers,id',
-            'employee_id' => 'required|exists:employees,id',
-            'items' => 'required|json'
+            'supplier_id'      => 'required|exists:suppliers,id',
+            'employee_id'      => 'required|exists:employees,id',
+            'date'             => 'required|date',
+            'product_id'       => 'required|array|min:1',
+            'product_id.*'     => 'required|exists:products,id',
+            'quantity'         => 'required|array|min:1',
+            'quantity.*'       => 'required|numeric|min:0.01',
+            'cost_per_unit'    => 'required|array|min:1',
+            'cost_per_unit.*'  => 'required|numeric|min:0',
         ]);
 
-        $items = json_decode($request->items, true);
-
-        DB::transaction(function () use ($request, $items) {
-
-            $stock = StockIn::create([
-                'supplier_id' => $request->supplier_id,
-                'employee_id' => $request->employee_id,
-                'date' => now(),
-                'total_cost' => 0
-            ]);
-
-            $total = 0;
-
-            foreach ($items as $item) {
-
-                StockInDetail::create([
-                    'stock_in_id' => $stock->id,
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'cost_per_unit' => $item['cost']
-                ]);
-
-                $total += $item['quantity'] * $item['cost'];
-
-                $inv = Inventory::firstOrCreate(
-                    ['product_id' => $item['product_id']],
-                    ['quantity_on_hand' => 0]
-                );
-                $inv->increment('quantity_on_hand', $item['quantity']);
-                $inv->touch();
+        DB::transaction(function () use ($request) {
+            $totalCost = 0;
+            foreach ($request->product_id as $i => $pid) {
+                $totalCost += $request->quantity[$i] * $request->cost_per_unit[$i];
             }
 
-            $stock->update(['total_cost' => $total]);
+            $stockIn = StockIn::create([
+                'supplier_id' => $request->supplier_id,
+                'employee_id' => $request->employee_id,
+                'date'        => $request->date,
+                'total_cost'  => $totalCost,
+            ]);
+
+            foreach ($request->product_id as $i => $pid) {
+                $qty = $request->quantity[$i];
+                $cpu = $request->cost_per_unit[$i];
+
+                StockInDetail::create([
+                    'stock_in_id'   => $stockIn->id,
+                    'product_id'    => $pid,
+                    'quantity'      => $qty,
+                    'cost_per_unit' => $cpu,
+                ]);
+
+                $inv = Inventory::firstOrCreate(
+                    ['product_id' => $pid],
+                    ['quantity_on_hand' => 0, 'border_point' => 10]
+                );
+                $inv->quantity_on_hand += $qty;
+                $inv->save();
+            }
         });
 
-        return redirect('/stock-in')->with('success', 'Stock in created successfully');
+        return redirect()->route('stock-in.index')
+            ->with('success', 'Stock-in recorded and inventory updated successfully!');
     }
 
     public function show(StockIn $stockIn)
     {
+        $stockIn->load(['supplier', 'employee', 'details.product']);
         return view('stock-in.show', compact('stockIn'));
-    }
-
-    public function edit(StockIn $stockIn)
-    {
-        return view('stock-in.edit', compact('stockIn'));
-    }
-
-    public function update(Request $request, StockIn $stockIn)
-    {
-        //
-    }
-
-    public function destroy(StockIn $stockIn)
-    {
-        //
     }
 }

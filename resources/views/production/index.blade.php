@@ -154,11 +154,11 @@
     <div class="card-body">
         @forelse($productions as $prod)
         <div class="prod-log">
-            <div class="prod-log-header" onclick="toggleLog({{ $prod->id }})">
+            <div class="prod-log-header" onclick="toggleLog({{ $prod->production_id }})">
                 <div>
                     <div class="prod-log-title">
                         <i class="fas fa-fire-burner" style="color:var(--red-primary);margin-right:6px;"></i>
-                        Production Batch #{{ $prod->id }} — {{ $prod->employee->first_name ?? 'Staff' }} {{ $prod->employee->last_name ?? '' }}
+                        Production Batch #{{ $prod->production_id }} — {{ $prod->employee->first_name ?? 'Staff' }} {{ $prod->employee->last_name ?? '' }}
                     </div>
                     <div class="prod-log-meta">
                         {{ \Carbon\Carbon::parse($prod->date)->format('F d, Y · h:i A') }}
@@ -168,10 +168,20 @@
                     <span class="badge badge-green">
                         {{ $prod->outputs->sum('quantity_produced') }} units produced
                     </span>
+                    @if(\Carbon\Carbon::parse($prod->date)->isToday())
+                    <form action="{{ route('production.destroy', $prod->production_id) }}" method="POST"
+                          onclick="event.stopPropagation()"
+                          onsubmit="return confirm('Reverse and delete this production batch? Inventory will be restored.')">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="btn btn-sm btn-danger" style="padding:5px 10px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                    @endif
                     <i class="fas fa-chevron-down" style="color:var(--gray-600);font-size:12px;"></i>
                 </div>
             </div>
-            <div class="prod-log-body" id="prodLog-{{ $prod->id }}">
+            <div class="prod-log-body" id="prodLog-{{ $prod->production_id }}">
                 <div class="raw-finished-grid">
                     <div>
                         <div class="mat-section-title">
@@ -205,6 +215,11 @@
         </div>
         @endforelse
     </div>
+    @if($productions->hasPages())
+    <div style="padding:16px 20px;border-top:1px solid var(--gray-200);">
+        {{ $productions->links() }}
+    </div>
+    @endif
 </div>
 
 <!-- ─── NEW PRODUCTION MODAL ─── -->
