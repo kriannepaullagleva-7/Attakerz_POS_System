@@ -9,9 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('inventories', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
-            $table->decimal('quantity_on_hand', 10, 2)->default(0);
+            $table->increments('id');
+            $table->unsignedInteger('product_id');
+            $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();
+            $table->integer('quantity_on_hand')->default(0);
             $table->integer('border_point')->default(10);
             $table->timestamp('last_updated')->nullable();
             $table->timestamps();

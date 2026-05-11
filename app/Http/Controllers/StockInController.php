@@ -44,7 +44,7 @@ class StockInController extends Controller
             'product_id'       => 'required|array|min:1',
             'product_id.*'     => 'required|exists:products,id',
             'quantity'         => 'required|array|min:1',
-            'quantity.*'       => 'required|numeric|min:0.01',
+            'quantity.*'       => 'required|integer|min:1',
             'cost_per_unit'    => 'required|array|min:1',
             'cost_per_unit.*'  => 'required|numeric|min:0',
         ]);
@@ -66,19 +66,19 @@ class StockInController extends Controller
                 $qty = $request->quantity[$i];
                 $cpu = $request->cost_per_unit[$i];
 
+                // Ensure inventory record exists before the trigger fires
+                Inventory::firstOrCreate(
+                    ['product_id' => $pid],
+                    ['quantity_on_hand' => 0, 'border_point' => 10]
+                );
+
+                // trg_stockin_update_inventory fires after this insert
                 StockInDetail::create([
                     'stock_in_id'   => $stockIn->id,
                     'product_id'    => $pid,
                     'quantity'      => $qty,
                     'cost_per_unit' => $cpu,
                 ]);
-
-                $inv = Inventory::firstOrCreate(
-                    ['product_id' => $pid],
-                    ['quantity_on_hand' => 0, 'border_point' => 10]
-                );
-                $inv->quantity_on_hand += $qty;
-                $inv->save();
             }
         });
 

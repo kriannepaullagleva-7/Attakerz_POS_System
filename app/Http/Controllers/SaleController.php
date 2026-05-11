@@ -67,15 +67,13 @@ class SaleController extends Controller
                     throw new \Exception("Insufficient stock for: {$name}");
                 }
 
+                // trg_sales_deduct_inventory fires after this insert
                 SaleDetail::create([
                     'sale_id'    => $sale->id,
                     'product_id' => $item['id'],
                     'quantity'   => $item['qty'],
                     'unit_price' => $item['price'],
                 ]);
-
-                $inv->quantity_on_hand -= $item['qty'];
-                $inv->save();
             }
         });
 

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Production;
@@ -42,11 +41,11 @@ class ProductionController extends Controller
             'raw_product_id'       => 'required|array|min:1',
             'raw_product_id.*'     => 'required|exists:products,id',
             'raw_quantity'         => 'required|array|min:1',
-            'raw_quantity.*'       => 'required|numeric|min:0.01',
+            'raw_quantity.*'       => 'required|integer|min:1',
             'output_product_id'    => 'required|array|min:1',
             'output_product_id.*'  => 'required|exists:products,id',
             'output_quantity'      => 'required|array|min:1',
-            'output_quantity.*'    => 'required|numeric|min:0.01',
+            'output_quantity.*'    => 'required|integer|min:1',
         ]);
 
         DB::transaction(function () use ($request) {

@@ -9,8 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('sales', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('employee_id')->nullable()->constrained('employees')->nullOnDelete();
+            $table->increments('id');
+            $table->unsignedInteger('employee_id')->nullable();
+            $table->foreign('employee_id')->references('id')->on('employees')->nullOnDelete();
             $table->dateTime('date');
             $table->decimal('total_amount', 10, 2);
             $table->decimal('cash_paid', 10, 2)->nullable();

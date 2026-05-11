@@ -2,71 +2,38 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Production;
-use Carbon\Carbon;
 use App\Models\Inventory;
 use App\Models\Product;
-use App\Models\Employee;
 use Illuminate\Http\Request;
 
 class InventoryController extends Controller
 {
-public function index()
-{
-    $inventories = Inventory::with('product')
-        ->whereHas('product')
-        ->orderBy('quantity_on_hand')
-        ->get();
+    public function index()
+    {
+        $inventories = Inventory::with('product')
+            ->whereHas('product')
+            ->orderBy('quantity_on_hand')
+            ->get();
 
-    $totalItems       = $inventories->count();
-    $rawMaterialCount = $inventories->filter(fn($i) => $i->product->category === 'raw')->count();
-    $finishedCount    = $inventories->filter(fn($i) => $i->product->category === 'finished')->count();
-    $lowStockCount    = $inventories->filter(fn($i) => $i->quantity_on_hand <= ($i->border_point ?? 10))->count();
+        $totalItems       = $inventories->count();
+        $rawMaterialCount = $inventories->filter(fn($i) => $i->product->category === 'raw')->count();
+        $finishedCount    = $inventories->filter(fn($i) => $i->product->category === 'finished')->count();
+        $lowStockCount    = $inventories->filter(fn($i) => $i->quantity_on_hand <= ($i->border_point ?? 10))->count();
 
-    $todayProductions = Production::whereDate('date', Carbon::today())->count();
-
-    $todayOutput = Production::whereDate('date', Carbon::today())
-        ->with('outputs')
-        ->get()
-        ->sum(fn($prod) => $prod->outputs->sum('quantity_produced'));
-
-    $totalLogs = Production::count();
-
-    $productions = Production::with(['employee', 'outputs'])
-        ->orderBy('date', 'desc')
-        ->get();
-
-    $employees = Employee::orderBy('first_name')->get();
-
-    $rawProducts = Product::where('category', 'raw')
-        ->orderBy('product_name')
-        ->get();
-
-    $finishedProducts = Product::where('category', 'finished')
-        ->orderBy('product_name')
-        ->get();
-        
-    return view('inventory.index', compact(
-        'inventories',
-        'totalItems',
-        'rawMaterialCount',
-        'finishedCount',
-        'lowStockCount',
-        'todayProductions',
-        'todayOutput',
-        'totalLogs',
-        'productions',
-        'employees',
-        'rawProducts',
-        'finishedProducts'
-    ));
+        return view('inventory.index', compact(
+            'inventories',
+            'totalItems',
+            'rawMaterialCount',
+            'finishedCount',
+            'lowStockCount'
+        ));
     }
 
     public function quickAdd(Request $request)
     {
         $request->validate([
             'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|numeric|min:0.01',
+            'quantity'   => 'required|integer|min:1',
         ]);
 
         $inv = Inventory::firstOrCreate(
@@ -76,6 +43,29 @@ public function index()
         $inv->increment('quantity_on_hand', $request->quantity);
         $inv->touch();
 
-        return response()->json(['success' => true, 'message' => 'Inventory updated']);
+        return redirect()->route('inventory.index')
+            ->with('success', 'Stock added successfully.');
+    }
+
+    public function reduce(Request $request, Inventory $inventory)
+    {
+        $request->validate([
+            'quantity' => 'required|integer|min:1|max:' . $inventory->quantity_on_hand,
+        ]);
+
+        $inventory->decrement('quantity_on_hand', $request->quantity);
+        $inventory->touch();
+
+        $unit = $inventory->product->unit ?? '';
+        return redirect()->route('inventory.index')
+            ->with('success', "Reduced stock by {$request->quantity} {$unit}.");
+    }
+
+    public function destroy(Inventory $inventory)
+    {
+        $name = $inventory->product->product_name ?? 'Item';
+        $inventory->delete();
+        return redirect()->route('inventory.index')
+            ->with('success', "\"{$name}\" removed from inventory.");
     }
 }

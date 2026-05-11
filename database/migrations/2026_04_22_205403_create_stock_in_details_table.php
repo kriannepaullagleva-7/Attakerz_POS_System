@@ -9,10 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('stock_in_details', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('stock_in_id')->constrained('stock_ins')->cascadeOnDelete();
-            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
-            $table->decimal('quantity', 10, 2);
+            $table->increments('id');
+            $table->unsignedInteger('stock_in_id');
+            $table->foreign('stock_in_id')->references('id')->on('stock_ins')->cascadeOnDelete();
+            $table->unsignedInteger('product_id');
+            $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();
+            $table->integer('quantity');
             $table->decimal('cost_per_unit', 10, 2);
         });
     }

@@ -431,6 +431,9 @@
         <a href="{{ route('suppliers.index') }}" class="nav-item {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">
             <i class="fas fa-people-carry-box"></i> Suppliers
         </a>
+        <a href="{{ route('employees.index') }}" class="nav-item {{ request()->routeIs('employees.*') ? 'active' : '' }}">
+            <i class="fas fa-users"></i> Employees
+        </a>
         <a href="{{ route('reports.index') }}" class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}">
             <i class="fas fa-chart-bar"></i> Reports
         </a>

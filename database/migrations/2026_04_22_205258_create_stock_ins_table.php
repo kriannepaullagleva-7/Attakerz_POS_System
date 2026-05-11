@@ -9,9 +9,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('stock_ins', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('supplier_id')->constrained('suppliers')->cascadeOnDelete();
-            $table->foreignId('employee_id')->constrained('employees')->cascadeOnDelete();
+            $table->increments('id');
+            $table->unsignedInteger('supplier_id');
+            $table->foreign('supplier_id')->references('id')->on('suppliers')->cascadeOnDelete();
+            $table->unsignedInteger('employee_id');
+            $table->foreign('employee_id')->references('id')->on('employees')->cascadeOnDelete();
             $table->dateTime('date');
             $table->decimal('total_cost', 10, 2)->default(0);
             $table->timestamps();

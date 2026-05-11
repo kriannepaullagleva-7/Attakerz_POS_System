@@ -12,12 +12,13 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Employees (per data gathering: Juan Dela Cruz - cashier/storekeeper, Maria Garcia - staff)
         Employee::create([
             'first_name'     => 'Juan',
-            'middle_name'    => 'Santos',
-            'last_name'      => 'Dela Cruz',
+            'middle_name'    => 'Dela',
+            'last_name'      => 'Cruz',
             'contact_number' => '09123456789',
-            'address'        => '123 Main St, Manila',
+            'address'        => 'Bunawan, Davao City',
             'role'           => 'cashier',
         ]);
 
@@ -26,10 +27,11 @@ class DatabaseSeeder extends Seeder
             'middle_name'    => 'Garcia',
             'last_name'      => 'Lopez',
             'contact_number' => '09987654321',
-            'address'        => '456 Second Ave, Quezon City',
+            'address'        => 'Bunawan, Davao City',
             'role'           => 'staff',
         ]);
 
+        // Suppliers (per data gathering document)
         Supplier::create([
             'supplier_name'  => 'Local Poultry Farm',
             'contact_number' => '02-1234567',
@@ -42,29 +44,29 @@ class DatabaseSeeder extends Seeder
             'address'        => 'Digos City',
         ]);
 
-        // Raw materials
+        // Raw materials (prices and stock per prototype mockup)
         $rawProducts = [
-            ['product_name' => 'Whole Chicken',  'unit' => 'pc',     'price' => 180.00],
-            ['product_name' => 'Charcoal',        'unit' => 'kg',     'price' =>  30.00],
-            ['product_name' => 'BBQ Marinade',    'unit' => 'bottle', 'price' =>  25.00],
-            ['product_name' => 'Pork Belly',      'unit' => 'kg',     'price' => 250.00],
+            ['product_name' => 'Whole Chicken', 'unit' => 'pc',     'price' => 180.00],
+            ['product_name' => 'Charcoal',       'unit' => 'kg',     'price' =>  30.00],
+            ['product_name' => 'BBQ Marinade',   'unit' => 'bottle', 'price' =>  25.00],
+            ['product_name' => 'Pork Belly',     'unit' => 'kg',     'price' => 250.00],
         ];
 
-        $rawQty = [50, 100, 40, 80];
+        $rawQty = [30, 100, 30, 80];
 
         foreach ($rawProducts as $i => $data) {
             $product = Product::create(array_merge($data, ['category' => 'raw']));
             Inventory::create(['product_id' => $product->id, 'quantity_on_hand' => $rawQty[$i]]);
         }
 
-        // Finished products
+        // Finished products (prices per prototype mockup: ₱250, ₱140, ₱150)
         $finishedProducts = [
             ['product_name' => 'Whole Lechon Manok', 'unit' => 'pc', 'price' => 250.00],
             ['product_name' => 'Half Lechon Manok',  'unit' => 'pc', 'price' => 140.00],
             ['product_name' => 'Liempo',              'unit' => 'pc', 'price' => 150.00],
         ];
 
-        $finishedQty = [20, 60, 100];
+        $finishedQty = [60, 60, 100];
 
         foreach ($finishedProducts as $i => $data) {
             $product = Product::create(array_merge($data, ['category' => 'finished']));

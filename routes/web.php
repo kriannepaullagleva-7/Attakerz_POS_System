@@ -9,6 +9,7 @@ use App\Http\Controllers\SaleController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProductionController;
+use App\Http\Controllers\EmployeeController;
 
 // Dashboard
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -21,9 +22,10 @@ Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
 Route::post('/sales', [SaleController::class, 'store'])->name('sales.store');
 Route::get('/sales/{sale}', [SaleController::class, 'show'])->name('sales.show');
 
-// Products & Suppliers — modal-based CRUD, no dedicated create/edit/show pages
+// Products, Suppliers, Employees — modal-based CRUD, no dedicated create/edit/show pages
 Route::resource('products', ProductController::class)->only(['index', 'store', 'update', 'destroy']);
 Route::resource('suppliers', SupplierController::class)->only(['index', 'store', 'update', 'destroy']);
+Route::resource('employees', EmployeeController::class)->only(['index', 'store', 'update', 'destroy']);
 
 // Stock In
 Route::resource('stock-in', StockInController::class)->only(['index', 'create', 'store', 'show']);
@@ -31,6 +33,8 @@ Route::resource('stock-in', StockInController::class)->only(['index', 'create', 
 // Inventory
 Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
 Route::post('/inventory/quick-add', [InventoryController::class, 'quickAdd'])->name('inventory.quick-add');
+Route::patch('/inventory/{inventory}/reduce', [InventoryController::class, 'reduce'])->name('inventory.reduce');
+Route::delete('/inventory/{inventory}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
 
 // Production
 Route::get('/production', [ProductionController::class, 'index'])->name('production.index');

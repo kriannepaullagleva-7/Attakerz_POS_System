@@ -32,6 +32,29 @@
     }
     .quick-add-form.open { display: block; }
     .quick-add-row { display: flex; gap: 10px; align-items: flex-end; }
+
+    /* Manage Stock Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 999; }
+    .modal-overlay.show { display: flex; }
+    .modal-box { background: #fff; border-radius: 14px; width: 460px; box-shadow: 0 24px 64px rgba(0,0,0,0.15); }
+    .modal-header { padding: 18px 22px; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-size: 16px; font-weight: 700; }
+    .modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--gray-600); }
+    .modal-body { padding: 22px; }
+
+    .manage-section {
+        border: 1.5px solid var(--gray-200); border-radius: 10px;
+        padding: 16px; margin-bottom: 14px;
+    }
+    .manage-section-title {
+        font-size: 13px; font-weight: 700; color: var(--gray-800);
+        margin-bottom: 10px; display: flex; align-items: center; gap: 7px;
+    }
+    .danger-zone {
+        border-color: #FCA5A5; background: #FFF5F5;
+    }
+    .danger-zone .manage-section-title { color: #991B1B; }
+    .danger-note { font-size: 12px; color: #991B1B; margin-bottom: 12px; line-height: 1.5; }
 </style>
 @endpush
 
@@ -92,7 +115,6 @@
                     <th>Item Name</th>
                     <th>Type</th>
                     <th>Current Stock</th>
-                    <th>Stock Used</th>
                     <th>Status</th>
                     <th>Border Point</th>
                     <th>Actions</th>
@@ -129,29 +151,35 @@
                             </span>
                         </div>
                     </td>
-                    <td style="color:var(--gray-600);font-size:13px;">{{ $inv->total_used ?? 0 }} {{ $inv->product->unit }}</td>
                     <td><span class="badge {{ $badgeClass }}">{{ $status }}</span></td>
                     <td style="font-size:13px;color:var(--gray-600);">{{ $inv->border_point ?? 10 }} {{ $inv->product->unit }}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="toggleAddStock({{ $inv->id }})">
-                            <i class="fas fa-plus"></i> Add Stock
-                        </button>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <button class="btn btn-sm btn-primary" onclick="toggleAddStock({{ $inv->id }})">
+                                <i class="fas fa-plus"></i> Add Stock
+                            </button>
+                            <button class="btn btn-sm btn-danger" title="Manage / Remove stock"
+                                onclick="openManageModal(
+                                    {{ $inv->id }},
+                                    '{{ addslashes($inv->product->product_name) }}',
+                                    {{ $inv->quantity_on_hand }},
+                                    '{{ $inv->product->unit }}'
+                                )">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 <tr>
-                    <td colspan="7" style="padding:0;">
+                    <td colspan="6" style="padding:0;">
                         <div class="quick-add-form" id="addForm-{{ $inv->id }}">
                             <form action="{{ route('inventory.quick-add') }}" method="POST">
                                 @csrf
                                 <input type="hidden" name="product_id" value="{{ $inv->product_id }}">
                                 <div class="quick-add-row">
-                                    <div class="form-group" style="margin:0;flex:0 0 140px;">
+                                    <div class="form-group" style="margin:0;flex:0 0 160px;">
                                         <label class="form-label">Quantity to Add</label>
-                                        <input type="number" name="quantity" class="form-control" min="1" placeholder="0" required>
-                                    </div>
-                                    <div class="form-group" style="margin:0;flex:0 0 140px;">
-                                        <label class="form-label">Cost per Unit</label>
-                                        <input type="number" name="cost_per_unit" class="form-control" step="0.01" placeholder="0.00">
+                                        <input type="number" name="quantity" class="form-control" min="1" step="1" placeholder="0" required>
                                     </div>
                                     <button type="submit" class="btn btn-success">
                                         <i class="fas fa-check"></i> Confirm Add
@@ -165,6 +193,65 @@
                 @endforeach
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- ─── MANAGE STOCK MODAL ─── -->
+<div class="modal-overlay" id="manageModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title">
+                <i class="fas fa-sliders" style="color:var(--red-primary)"></i>
+                Manage Stock — <span id="manageProductName"></span>
+            </div>
+            <button class="modal-close" onclick="closeManageModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+
+            <div style="background:var(--gray-50);border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:13px;color:var(--gray-600);display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-boxes-stacked" style="color:var(--red-primary);"></i>
+                Current stock: <strong id="manageCurrentQty" style="color:var(--gray-800);margin-left:4px;font-family:var(--font-mono);"></strong>
+            </div>
+
+            <!-- Reduce quantity -->
+            <div class="manage-section">
+                <div class="manage-section-title">
+                    <i class="fas fa-minus-circle" style="color:#D97706;"></i> Reduce Stock
+                </div>
+                <form id="reduceForm" method="POST">
+                    @csrf @method('PATCH')
+                    <div style="display:flex;gap:10px;align-items:flex-end;">
+                        <div class="form-group" style="margin:0;flex:1;">
+                            <label class="form-label">Quantity to Remove</label>
+                            <input type="number" name="quantity" id="reduceQty" class="form-control"
+                                min="1" step="1" placeholder="0" required>
+                        </div>
+                        <div style="padding-bottom:1px;">
+                            <span id="reduceUnit" style="font-size:13px;color:var(--gray-600);white-space:nowrap;"></span>
+                        </div>
+                        <button type="submit" class="btn btn-secondary" style="flex-shrink:0;margin-bottom:1px;">
+                            <i class="fas fa-check"></i> Confirm
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Remove entirely -->
+            <div class="manage-section danger-zone">
+                <div class="manage-section-title">
+                    <i class="fas fa-trash"></i> Remove from Inventory
+                </div>
+                <p class="danger-note">This permanently removes the inventory record for this product. The product itself is not deleted. Use this only if you want to stop tracking this item.</p>
+                <form id="deleteForm" method="POST">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="btn btn-danger btn-sm"
+                        onclick="return confirm('Are you sure? This will remove the inventory record entirely.')">
+                        <i class="fas fa-trash"></i> Remove Entirely
+                    </button>
+                </form>
+            </div>
+
+        </div>
     </div>
 </div>
 
@@ -202,5 +289,24 @@ function filterInv() {
         if (next) next.style.display = matchSearch && matchFilter ? '' : 'none';
     });
 }
+
+function openManageModal(id, name, qty, unit) {
+    document.getElementById('manageProductName').textContent = name;
+    document.getElementById('manageCurrentQty').textContent  = qty + ' ' + unit;
+    document.getElementById('reduceUnit').textContent        = unit;
+    document.getElementById('reduceQty').max                 = qty;
+    document.getElementById('reduceQty').value               = '';
+    document.getElementById('reduceForm').action  = `/inventory/${id}/reduce`;
+    document.getElementById('deleteForm').action  = `/inventory/${id}`;
+    document.getElementById('manageModal').classList.add('show');
+}
+
+function closeManageModal() {
+    document.getElementById('manageModal').classList.remove('show');
+}
+
+document.getElementById('manageModal').addEventListener('click', function(e) {
+    if (e.target === this) closeManageModal();
+});
 </script>
 @endpush

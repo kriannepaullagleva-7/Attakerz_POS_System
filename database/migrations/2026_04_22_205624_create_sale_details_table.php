@@ -12,9 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('sale_details', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('sale_id')->constrained('sales')->onDelete('cascade');
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
+            $table->increments('id');
+            $table->unsignedInteger('sale_id');
+            $table->foreign('sale_id')->references('id')->on('sales')->cascadeOnDelete();
+            $table->unsignedInteger('product_id');
+            $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();
             $table->integer('quantity');
             $table->decimal('unit_price', 10, 2);
         });
